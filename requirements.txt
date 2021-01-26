@@ -1,0 +1,5 @@
+ipykernel==5.3.4
+notebook==6.1.5
+seaborn==0.11.0
+fastai==2.1.8
+numpy 
