@@ -115,14 +115,14 @@ class RP_Dataset(Abstract_Dataset):
         wind_len (int): Windows lenght
         debut(int): Starting indice of the considered time series.
     """
-    def __init__(self, subjects, sampling_params, wind_len , debut = 0, fin = 946, dry_run = False ):
+    def __init__(self, subjects, sampling_params, wind_len , debut = 0, fin = 946, dry_run = False, tr=1.5 ):
         
         super().__init__(subjects, wind_len = wind_len, n_features = 3)
-    
+        self.tr = tr
         self.audio, self.sr = self.load_audio()
         self.pos , self.neg = sampling_params[0]*self.sr, sampling_params[1]*self.sr
         self.d, self.f = debut, fin #in tr
-        self.d_audio , self.f_audio = int(self.d*1.5*self.sr), int(self.f*1.5*self.sr)
+        self.d_audio , self.f_audio = int(self.d*self.tr*self.sr), int(self.f*self.tr*self.sr)
         self.dry_run = dry_run
     def get_windows(self,index):
         '''
@@ -151,14 +151,14 @@ class RP_Dataset(Abstract_Dataset):
         return (index[1]>0.5)*1
     def get_pos(self, t_anchor):
         w = self.w*self.sr #frmi  to audio window lenght
-        t = int(t_anchor*1.5*self.sr) #frmi indice to audio
+        t = int(t_anchor*self.tr*self.sr) #frmi indice to audio
         start = max(self.d_audio,t-self.pos ) 
         end = min(self.f_audio - w-1,t+self.pos) # to get a sequence of lenght self.w
         t_ = choice(arange(start,end, 1)) 
         return t_
     def get_neg(self, t_anchor):
         w = self.w*self.sr
-        t = int(t_anchor*1.5*self.sr)
+        t = int(t_anchor*self.tr*self.sr)
         left_idx = arange(self.d_audio, max(self.d_audio, t - self.neg), 1)
         right_idx =arange(min(self.f_audio-w-1, t + self.neg-1),self.f_audio-w-1 ,1)
         t_ = choice(hstack([left_idx, right_idx])) # 
