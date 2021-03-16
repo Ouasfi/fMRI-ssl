@@ -52,7 +52,7 @@ class RPSampler(torch.utils.data.sampler.Sampler):
                     # each sample is a target and an anchor window. Positive or/and negative windows are sampled in the Dataset class. 
                     target  = 2*torch.multinomial(
                 self.weights, 1, replacement=True) -1
-                    t = choice(arange(self.d, self.f-int(self.dataset.w/1.5), 1))
+                    t = choice(arange(self.d, self.f-int(self.dataset.w/self.tr), 1))
                     sampled += 1
                     yield (t,target,subject)
             
@@ -137,7 +137,7 @@ class RP_Dataset(Abstract_Dataset):
         #load fmri data
         fmri =self.load_fmri(subject)
         # slice 
-        fmri_w = fmri[t:t+int(self.w/1.5)] # fmri index*1.5 -->seconds
+        fmri_w = fmri[t:t+int(self.w/self.tr)] # fmri index*TR -->seconds
         # sample a positive or negative audio window
         audio_w = self.audio[t_:t_+self.w*self.sr] # could be negative or positive
         return (fmri_w, audio_w)
