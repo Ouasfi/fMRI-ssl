@@ -46,7 +46,7 @@ def clean_parcel(filepath_fmri,roimask,save=False,savepath='./results',visualize
     roimask : path to mask file in nii.gz, should be a ROI, will mask all voxels in this ROI
     save : Boolean, whether to save the data (default: False)
     savepath : path to save the data
-    visualize : plots the average over voxels as a function of time 
+    visualize : plots the average over voxels as a function of time, as well as the average (over time) plotted on the brain
     drop : whether to delete the nii gz file after download, will use datalad drop after masking (default : True)
 
     returns : 
@@ -100,6 +100,7 @@ def clean_parcel(filepath_fmri,roimask,save=False,savepath='./results',visualize
     
     if drop:
         api.drop(filepath_fmri,dataset=api.Dataset(basepath),check=False)
+        api.drop(tsvfile_fmri,dataset=api.Dataset(basepath),check=False)
     return X
 
 for s in os.walk(basepath):
