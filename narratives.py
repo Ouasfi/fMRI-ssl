@@ -24,7 +24,7 @@ if os.path.isfile('parcellation/STG_middle.nii.gz'):
     print("Mask was already computed")
 else:
     print("Computing parcellation mask for bilateral STG middle")
-    from parcellation.MIST_auditorymasks import *
+    from parcellation.MIST_auditorymasks import allrois
 
 ### first install the fmriprep derivatives using datalad 
 ### `datalad install -r datalad -r install ///labs/hasson/narratives/derivatives/fmriprep`
