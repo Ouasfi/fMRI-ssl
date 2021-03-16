@@ -9,8 +9,8 @@ import random
 from fastai.vision.all import *
 
 
-AUDIODIR = "data/audio"
-FMRIDIR = "data/fmri/processed"
+AUDIODIR = '/media/nfarrugi/datapal/narratives/stimuli'
+FMRIDIR = '/media/nfarrugi/datapal/narratives/parcellated'
 
 class RPSampler(torch.utils.data.sampler.Sampler):
     r"""Pour chaque subject sample n windows de sorte à avoir un dataset équilibré en 
