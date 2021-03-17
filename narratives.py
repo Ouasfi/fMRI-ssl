@@ -56,11 +56,18 @@ def clean_parcel(filepath_fmri,roimask,save=False,savepath='./results',visualize
     
     filedir,filebase = os.path.split(filepath_fmri)    
     filebasesplit = filebase.split('_')
-    tsvfile_fmri = os.path.join(filedir, filebasesplit[0] + '_' + filebasesplit[1] + '_' + 'desc-confounds_regressors.tsv')
-    print(tsvfile_fmri)
+    if 'run' in filebasesplit[2]:
+        tsvfile_fmri = os.path.join(filedir, filebasesplit[0] + '_' + filebasesplit[1] + '_' + filebasesplit[2] + '_' + 'desc-confounds_regressors.tsv')
+        print(tsvfile_fmri)
 
-    resultfile = os.path.join(savepath,filebasesplit[0] + '_' + filebasesplit[1] + '_'  + filebasesplit[2] + filebasesplit[3] + '.npz')
-    print(resultfile)
+        resultfile = os.path.join(savepath,filebasesplit[0] + '_' + filebasesplit[1] + '_'  + filebasesplit[2]  + '_' + filebasesplit[3] + filebasesplit[4] + '.npz')
+        print(resultfile)
+    else:
+        tsvfile_fmri = os.path.join(filedir, filebasesplit[0] + '_' + filebasesplit[1] + '_' + 'desc-confounds_regressors.tsv')
+        print(tsvfile_fmri)
+
+        resultfile = os.path.join(savepath,filebasesplit[0] + '_' + filebasesplit[1] + '_'  + filebasesplit[2] + filebasesplit[3] + '.npz')
+        print(resultfile)
 
     mymasker = NiftiMasker(mask_img=roimask,standardize=False,detrend=False,smoothing_fwhm=None)
 
@@ -88,6 +95,11 @@ def clean_parcel(filepath_fmri,roimask,save=False,savepath='./results',visualize
             os.makedirs(savepath,exist_ok=True)
             
             np.savez_compressed(resultfile,X=X)
+
+        if drop:
+            api.drop(filepath_fmri,dataset=api.Dataset(basepath),check=False)
+            api.drop(tsvfile_fmri,dataset=api.Dataset(basepath),check=False)
+        return X
         
     if visualize:
         f,ax = plt.subplots(nrows=2,ncols=1,squeeze=True)
@@ -98,9 +110,6 @@ def clean_parcel(filepath_fmri,roimask,save=False,savepath='./results',visualize
         plot_stat_map(parcellated_mean,figure=f,axes=ax[1])
         plt.show()
     
-    if drop:
-        api.drop(filepath_fmri,dataset=api.Dataset(basepath),check=False)
-        api.drop(tsvfile_fmri,dataset=api.Dataset(basepath),check=False)
     return X
 
 for s in os.walk(basepath):
