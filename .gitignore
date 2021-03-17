@@ -4,3 +4,5 @@ __pycache__/
 .vscode/
 *.pth
 data/
+/parcellation/sub-*.npz
+/stimuli
