@@ -6,3 +6,5 @@ __pycache__/
 data/
 /parcellation/sub-*.npz
 /stimuli
+audio.ipynb
+models/*ipynb
