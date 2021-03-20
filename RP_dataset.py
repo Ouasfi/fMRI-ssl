@@ -37,7 +37,7 @@ class RPSampler(torch.utils.data.sampler.Sampler):
         self.weights = torch.DoubleTensor(weights)
         self.f = self.dataset.f # fin de la serie temporelle
         self.d = self.dataset.d
-        self.tr = self.dataset.tr
+        self.tr = self.dataset.tr_
         
     def __iter__(self):
         num_batches = self.size// self.batch_size
@@ -54,14 +54,14 @@ class RPSampler(torch.utils.data.sampler.Sampler):
                     # each sample is a target and an anchor window. Positive or/and negative windows are sampled in the Dataset class. 
                     target  = 2*torch.multinomial(
                 self.weights, 1, replacement=True) -1
-                    t = np.random.rand() if isinstance(self.dataset, RP_Dataset_Multi) else choice(arange(self.d, self.f-int(self.dataset.w/self.tr), 1))
+                    t = np.random.rand() if not isinstance(self.dataset, RP_Dataset) else choice(arange(self.d, self.f-int(self.dataset.w/self.tr), 1))
                     sampled += 1
                     yield (t,target,subject)
             
             num_batches -=1
 
     def __len__(self):
-        return self.size  
+        return self.size 
 
 #@title Relative positioning class
 T = 947
@@ -187,16 +187,17 @@ class RP_Dataset_Multi(Abstract_Dataset):
         wind_len (int): Windows lenght
         debut(int): Starting indice of the considered time series.
     """
-    def __init__(self, subjects, sampling_params, wind_len , debut = 0, fin = 946, dry_run = False,sr = 22050, tr=1.5 ):
+    def __init__(self, subjects, sampling_params, wind_len , debut = 0,\
+                 fin = None, dry_run = False,sr = 22050, tr=1.4, mode = 'train' ):
         
         super().__init__(subjects, wind_len = wind_len, n_features = 3)
-        self.tr = tr
-        self.sr = sr
+        self.tr_, self.sr = tr , sr
         self.pos , self.neg = sampling_params[0]*self.sr, sampling_params[1]*self.sr
         with open('mapping.json', 'r') as f : self.sub2stims = json.load(f)
+        #self.sub2stims = {key: value.__iter__() for key, value in self.sub2stims.items()}
         self.d, self.f = debut, fin #in tr
-        self.d_audio , self.f_audio = int(self.d*self.tr*self.sr), int(self.f*self.tr*self.sr)
         self.dry_run = dry_run
+        self.mode = mode
     def get_windows(self,index):
         '''
         a method to get sampled windows
@@ -207,44 +208,50 @@ class RP_Dataset_Multi(Abstract_Dataset):
         stim = self.select_stimuli(subject)
         #load fmri data
         fmri =self.load_fmri(subject, stim)
-        #define sampling intervals
+        # load audio
+        audio = self.load_audio( subject, stim) 
+        #define tr and audio intervals 
         self.f = fmri.shape[0]
-        self.d_audio , self.f_audio = int(self.d*self.tr*self.sr), int(self.f*self.tr*self.sr)
+        self.tr = audio.shape[1]/(self.f*self.sr) # assume frmi and audio are well aligned
+        self.d_audio , self.f_audio = 0, audio.shape[1]
         #rescale t
-        end, start =  self.f-int(self.w/self.tr), self.d
+        #fmri_index*TR -->seconds
+        w_tr = int(np.floor(self.w/self.tr_))
+        end, start =  self.f-w_tr, self.d
         t = int(t*(end-start +1) + start)
-        # slice 
-        fmri_w = fmri[t:t+int(self.w/self.tr)] # fmri index*TR -->seconds
+        # slice fmri window 
+        # use self.tr_ to have a fixed window length(instead of using pad_sequence in collate_fn)
+        fmri_w = fmri[t:t+w_tr] 
         # sample a positive or negative audio index
         t_ = self.get_pos(t) if target>0 else self.get_neg(t)
         if self.dry_run:
             return (t, t_)
-        # load audio
-        audio = self.load_audio( subject, stim)
         # sample a positive or negative audio window
-        audio_w = audio[t_:t_+self.w*self.sr] # could be negative or positive
-        if audio_w.shape[0] ==0:
-            print(stim , t,t_  ,audio_w.shape, fmri_w.shape)
+        audio_w = audio[0,t_:t_+self.w*self.sr]
         return (fmri_w, audio_w)
     def select_stimuli(self,subject):
-        # find all available  stimuli
-        stims = self.sub2stims[subject]
-        # select a stim randomly
-        return stims[0]#choice(stims)
+        # find a and filter all available  stimuli
+        stims = [stim for stim in self.sub2stims[subject] if stim !='piemanpni']
+        # select a stim randomly during training 
+        return choice(stims[:-1]) if self.mode == 'train' and len(stims)>1 else stims[-1]
     def load_audio(self, subject, stim):
+        stim = "milkywayoriginal" if stim == "milkyway" else stim
         stim_path = os.path.join(STIMS_DIR, f'{stim}_audio.npy')
-        return np.load( stim_path,mmap_mode = "c" )#, 22050
+        return np.load( stim_path,mmap_mode = "c" )
     def load_fmri(self ,subject ,stim ):
         path_= os.path.join(FMRIDIR,  f'sub-{subject}_task-{stim}_space-MNI152NLin2009cAsymres-native.npz')
         return np.load(path_,mmap_mode = "c")['X']
     def get_targets(self, index):
         return (index[1]>0.5)*1
     def get_pos(self, t_anchor):
-        w = self.w*self.sr #frmi  to audio window lenght
-        t = int(t_anchor*self.tr*self.sr) #frmi indice to audio
-        start = max(self.d_audio,t-self.pos ) 
-        end = min(self.f_audio - w-1,t+self.pos) # to get a sequence of lenght self.w
-        t_ = choice(arange(start,end, 1)) 
+        # convert `self.w` from seconds to the number of audio frames
+        w = self.w*self.sr 
+        # convert `t` from tr to the number of audio frames
+        t = int(t_anchor*self.tr*self.sr)
+        # self.d_audio and self.f_audio are updated in get_window to adapt to audio length
+        start = max(self.d_audio ,t-self.pos ) 
+        end   = min(self.f_audio-w-1 , t+self.pos) # to get a sequence of lenght self.w
+        t_    = choice(arange(start , end, 1))
         return t_
     def get_neg(self, t_anchor):
         w = self.w*self.sr
