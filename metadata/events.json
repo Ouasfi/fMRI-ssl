@@ -1,0 +1,168 @@
+{
+    "21styear": {
+      "21styear": {
+        "duration": 2225,
+        "onset": 0
+      }
+    },
+    "black": {
+      "black": {
+        "duration": 533,
+        "onset": 8
+      }
+    },
+    "bronx": {
+      "bronx": {
+        "duration": 357,
+        "onset": 8
+      }
+    },
+    "forgot": {
+      "forgot": {
+        "duration": 558,
+        "onset": 8
+      }
+    },
+    "lucy": {
+      "lucy": {
+        "duration": 361,
+        "onset": 2
+      }
+    },
+    "merlin": {
+      "merlin": {
+        "duration": 591,
+        "onset": 3
+      }
+    },
+    "milkyway": {
+      "milkyway": {
+        "duration": 269,
+        "onset": 0
+      }
+    },
+    "notthefallintact": {
+      "notthefallintact": {
+        "duration": 365,
+        "onset": 3
+      }
+    },
+    "notthefalllongscram": {
+      "notthefalllongscram": {
+        "duration": 365,
+        "onset": 3
+      }
+    },
+    "notthefallshortscram": {
+      "notthefallshortscram": {
+        "duration": 365,
+        "onset": 3
+      }
+    },
+    "pieman": {
+      "pieman": {
+        "duration": 281,
+        "onset": 0
+      }
+    },
+    "piemanpni": {
+      "piemanpni": {
+        "duration": 267,
+        "onset": 8
+      }
+    },
+    "prettymouth": {
+      "prettymouth": {
+        "duration": 451,
+        "onset": 0
+      }
+    },
+    "shapesphysical": {
+      "shapesphysical": {
+        "duration": 270,
+        "onset": 3
+      }
+    },
+    "shapessocial": {
+      "shapessocial": {
+        "duration": 272,
+        "onset": 3
+      }
+    },
+    "sherlock": {
+      "sherlock": {
+        "duration": 701,
+        "onset": 3
+      }
+    },
+    "slumlordreach": {
+      "reach": {
+        "duration": 550,
+        "onset": 646
+      },
+      "slumlord": {
+        "duration": 602,
+        "onset": 20
+      }
+    },
+    "tunnel": {
+      "tunnel": {
+        "duration": 1023,
+        "onset": 2
+      }
+    },
+    "schema": {
+      "schema": {
+        "duration": -1,
+        "onset": 0
+      }
+    },
+    "himym": {
+      "himym": {
+        "onset": 0, 
+        "duration": -1
+      }
+    },
+    "seinfeld": {
+      "seinfeld": {
+        "onset": 0, 
+        "duration": -1
+      }
+    },
+    "vinny": {
+      "vinny": {
+        "onset": 0, 
+        "duration": -1
+      }
+    },
+    "shame": {
+      "shame": {
+        "onset": 0, 
+        "duration": -1
+      }
+    },
+    "friends": {
+      "friends": {
+        "onset": 0, 
+        "duration": -1
+      }
+    },
+    "upintheair": {
+      "upintheair": {
+        "onset": 0, 
+        "duration": -1
+      }
+    },
+    "bigbang": {
+      "bigbang": {
+        "onset": 0, 
+        "duration": -1
+      }
+    },
+    "santa": {
+      "santa": {
+        "onset": 0, 
+        "duration": -1
+      }
+  }
+}

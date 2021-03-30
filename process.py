@@ -24,7 +24,7 @@ def subjects2stmulis(DIR: str):
     return subjects_stims, stimulis
 
 def process_audio(path):
-        if os.path.exists('np_stims/' + path.split('/')[-1].split('.')[0]+'.npy'): 
+        if os.path.exists(DATA_DIR+ path.split('/')[-1].split('.')[0]+'.npy'): 
             print(f'File {path} Already saved')
         else : 
             print(path)
@@ -32,30 +32,59 @@ def process_audio(path):
             waveform, sample_rate = torchaudio.load(path)
             resample.orig_freq = sample_rate
             wv_resampled = resample(waveform).numpy()
-            print('save', path)
             np.save(DATA_DIR + path.split('/')[-1].split('.')[0], wv_resampled)
+            print('Saved:', path)
 
 def get_metadata(stimuli):
     df = pd.DataFrame()
     df['paths'] = stimuli
-    df['sample_rate']= df['paths'].apply(lambda r : torchaudio.info(r)[0].rate);
-    df['length']= df['paths'].apply(lambda r : torchaudio.info(r)[0].length);
-    df['N_channels']= df['paths'].apply(lambda r : torchaudio.info(r)[0].channels);
+    df['sample_rate']= df['paths'].apply(lambda r : torchaudio.info(r).sample_rate);
+    df['length']= df['paths'].apply(lambda r : torchaudio.info(r).num_frames);
+    df['N_channels']= df['paths'].apply(lambda r : torchaudio.info(r).num_channels);
     df.index = df['paths'].apply(lambda r : r.split('/')[-1])
-    return df.drop(columns = ['paths']
+    return df#.drop(columns = ['paths'])
 
+def parse_events(subject, stim_run):
+    """
+    Parse events for Schema dataset
+    """
+    tr, sr  = 1.5, 11100
+    #load events tsv
+    events = pd.read_csv(f'data/narratives/{subject}/func/{subject}_task-{stim_run}_events.tsv', sep = '\t')
+    events = events.dropna(axis = 0, subset = ['stim_file'])
+    events.index = events.stim_file
+    stim, run = stim_run.split('_') # eg. schema_run-4
+    #load fmri data
+    fmri = np.load(f'data/parcellated/{subject}_task-{stim_run}_space-MNI152NLin2009cAsymres-native.npz', \
+        mmap_mode = 'c')['X']
+    # for each stim crop the correspanding fmri window
+    for stimuli in events.index:
+        stim = stimuli.split('_')[0]+ '_'+ run
+        onset = int(events.loc[stimuli].onset/tr)
+        offset = int((events.loc[stimuli].duration + events.loc[stimuli].onset)/tr)
+        fmri_ = fmri[onset:offset]
+        duration = np.floor(np.load(f'data/stimuli/{stimuli.split(".")[0]}.npy', mmap_mode = 'c').shape[1]/(sr*tr))
+        assert abs(fmri_.shape[0] - duration)<tr, f'fmri {fmri_.shape[0]} duration {duration}'
+        np.savez(f'data/parcellated/{subject}_task-{stim}_space-MNI152NLin2009cAsymres-native',fmri_)
+    return 
 if __name__ == "__main__":
 
-    DIR = 'parcellation'
-    stimuli = glob.glob('stimuli/*.wav'); 
-    subjects_stims, _ = subjects2stmulis(DIR )
-    with open('mapping.json', 'w') as f :
-        json.dump(subjects_stims, f)
+    FMRI_DIR = 'data/parcellated'
+    stimuli = glob.glob('data/stimuli/*.wav'); 
+    df = pd.read_csv('metadata/participants.csv', sep = '\t')
+    df.index = df['participant_id']
+    for i in range(1,5): 
+        list(map(lambda x : parse_events(x, stim_run = f'schema_run-{i}') \
+            , df[df['task'].apply(lambda r : 'schema' in r.split(','))].participant_id ))
+    
+    json.dump(subjects2stmulis(FMRI_DIR )[0], open('metadata/mapping.json', 'w'))
     df = get_metadata(stimuli)
     parser = argparse.ArgumentParser('Processing fmri data')
-    parser.add_argument('-d','--save_dir',help = "Dir ", type=str, default= './')
+    parser.add_argument('-d','--save_dir',help = "Dir ", type=str, default= 'data/stimuli/')
     DATA_DIR = parser.parse_args().save_dir
     with Pool() as pool:
         pool.map_async(process_audio, df.paths).get(60*8)
+
+    
     #vx = np.load('data/fmri/raw/' + file, allow_pickle =True)['X']
     #np.save('data/fmri/processed/sub_1.npy', vx)
