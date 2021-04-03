@@ -187,7 +187,7 @@ class RP_Dataset_Multi(Abstract_Dataset):
     ---------
         subjects (List): list of subjects  to use during training
         sampling_params (tuple(int,int)): positive and negative sampling windows
-        wind_len (int): Windows lenght
+        wind_len (int): Windows lenght in s
         debut(int): Starting indice of the considered time series.
     """
     def __init__(self, subjects, sampling_params, wind_len , debut = 0,\
@@ -213,7 +213,7 @@ class RP_Dataset_Multi(Abstract_Dataset):
         (t, target,subject) = index
         # select a stim
         stim = self.select_stimuli(subject)
-        fmri_onset = self.events[stim.split('_')[0]].get(stim.split('_')[0], {'onset': 3})['onset']
+        fmri_onset = self.events[stim.split('_')[0]].get(stim.split('_')[0], {'onset': 3})['onset'] 
         # load audio
         audio = self.load_audio( subject, stim)
         self.d_audio , self.f_audio = 0, audio.shape[1]

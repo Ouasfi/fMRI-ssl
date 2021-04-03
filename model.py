@@ -73,8 +73,9 @@ class SiameseModel(nn.Module):
         self.fmri = FMRIEmbed(voxels).float()
         self.metric = nn.Linear(hidden_dim, out_features = n_classes)
         self.flatten= nn.Flatten()
-    def forward(self, x_fmri, x_audio):
+    def forward(self, fmri_audio):
+        x_fmri, x_audio = fmri_audio
         x_audio = self.flatten(self.audio(x_audio))
-        x_fmri = self.flatten( self.fmri(x_fmri) )
+        x_fmri = self.flatten( self.fmri(x_fmri.float()) )
         x = self.metric(torch.abs(x_audio - x_fmri))
         return x
