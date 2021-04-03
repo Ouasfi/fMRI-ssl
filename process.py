@@ -24,7 +24,7 @@ def subjects2stmulis(DIR: str):
     return subjects_stims, stimulis
 
 def process_audio(path):
-        if os.path.exists(DATA_DIR+ path.split('/')[-1].split('.')[0]+'.npy'): 
+        if os.path.exists(AUDIODIR+ path.split('/')[-1].split('.')[0]+'.npy'): 
             print(f'File {path} Already saved')
         else : 
             print(path)
@@ -32,7 +32,7 @@ def process_audio(path):
             waveform, sample_rate = torchaudio.load(path)
             resample.orig_freq = sample_rate
             wv_resampled = resample(waveform).numpy()
-            np.save(DATA_DIR + path.split('/')[-1].split('.')[0], wv_resampled)
+            np.save(AUDIODIR + path.split('/')[-1].split('.')[0], wv_resampled)
             print('Saved:', path)
 
 def get_metadata(stimuli):
@@ -55,7 +55,7 @@ def parse_events(subject, stim_run):
     events.index = events.stim_file
     stim, run = stim_run.split('_') # eg. schema_run-4
     #load fmri data
-    fmri = np.load(f'data/parcellated/{subject}_task-{stim_run}_space-MNI152NLin2009cAsymres-native.npz', \
+    fmri = np.load(f'{FMRI_DIR}/{subject}_task-{stim_run}_space-MNI152NLin2009cAsymres-native.npz', \
         mmap_mode = 'c')['X']
     # for each stim crop the correspanding fmri window
     for stimuli in events.index:
@@ -63,14 +63,18 @@ def parse_events(subject, stim_run):
         onset = int(events.loc[stimuli].onset/tr)
         offset = int((events.loc[stimuli].duration + events.loc[stimuli].onset)/tr)
         fmri_ = fmri[onset:offset]
-        duration = np.floor(np.load(f'data/stimuli/{stimuli.split(".")[0]}.npy', mmap_mode = 'c').shape[1]/(sr*tr))
+        duration = np.floor(np.load(f'{AUDIODIR}/{stimuli.split(".")[0]}.npy', mmap_mode = 'c').shape[1]/(sr*tr))
         assert abs(fmri_.shape[0] - duration)<tr, f'fmri {fmri_.shape[0]} duration {duration}'
-        np.savez(f'data/parcellated/{subject}_task-{stim}_space-MNI152NLin2009cAsymres-native',fmri_)
+        np.savez(f'{FMRI_DIR}/{subject}_task-{stim}_space-MNI152NLin2009cAsymres-native',fmri_)
     return 
 if __name__ == "__main__":
 
+    parser = argparse.ArgumentParser('Processing fmri data')
+    parser.add_argument('-d','--save_dir',help = "Dir ", type=str, default= 'data/stimuli/')
+    AUDIODIR = parser.parse_args().save_dir
     FMRI_DIR = 'data/parcellated'
-    stimuli = glob.glob('data/stimuli/*.wav'); 
+
+    stimuli = glob.glob('data/stimuli/*.wav')
     df = pd.read_csv('metadata/participants.csv', sep = '\t')
     df.index = df['participant_id']
     for i in range(1,5): 
@@ -79,9 +83,7 @@ if __name__ == "__main__":
     
     json.dump(subjects2stmulis(FMRI_DIR )[0], open('metadata/mapping.json', 'w'))
     df = get_metadata(stimuli)
-    parser = argparse.ArgumentParser('Processing fmri data')
-    parser.add_argument('-d','--save_dir',help = "Dir ", type=str, default= 'data/stimuli/')
-    DATA_DIR = parser.parse_args().save_dir
+    
     with Pool() as pool:
         pool.map_async(process_audio, df.paths).get(60*8)
 
