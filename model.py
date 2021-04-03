@@ -73,9 +73,33 @@ class SiameseModel(nn.Module):
         self.fmri = FMRIEmbed(voxels).float()
         self.metric = nn.Linear(hidden_dim, out_features = n_classes)
         self.flatten= nn.Flatten()
-    def forward(self, fmri_audio):
-        x_fmri, x_audio = fmri_audio
+    def forward(self, x_fmri, x_audio):
+        #x_fmri, x_audio = fmri_audio
         x_audio = self.flatten(self.audio(x_audio))
         x_fmri = self.flatten( self.fmri(x_fmri.float()) )
         x = self.metric(torch.abs(x_audio - x_fmri))
         return x
+class SiameseModel_2(nn.Module):
+    """
+    SiameseModel
+    """
+    def __init__(self, hidden_dim, n_classes = 2, voxels = 3):
+        super(SiameseModel_2, self).__init__()
+        self.audio = AudioEmbed().float()
+        self.fmri = FMRIEmbed(voxels).float()
+        self.metric = nn.Linear(hidden_dim*2, out_features = n_classes)
+        self.flatten= nn.Flatten()
+    def forward(self, x_fmri, x_audio):
+        #x_fmri, x_audio = fmri_audio
+        x_audio = self.flatten(self.audio(x_audio))
+        x_fmri = self.flatten( self.fmri(x_fmri.float()) )
+        x = self.metric(torch.cat([x_audio , x_fmri], dim = 1))
+        return x
+
+class ToDevice(Callback):
+    "Move data to CUDA device and convert it to float"
+    def __init__(self, device=None): self.device = torch.device('cuda')#ifnone(device, DEVICE)
+    def before_batch(self): 
+        self.learn.xb = (self.learn.xb[0][0].float(), self.learn.xb[0][1].float())
+        self.learn.xb,self.learn.yb = to_device(self.xb),to_device(self.yb)
+    def before_fit(self): self.model.to(self.device)
