@@ -27,19 +27,19 @@ class RPSampler(torch.utils.data.sampler.Sampler):
         - The target is the class associeted to the pretexe task (eithre -1 or 1)
     """
 
-    def __init__(self,dataset, batch_size,size,  weights):
+    def __init__(self,dataset, batch_size,size,  weights,  n_subjects = None):
     
         
         self.batch_size = batch_size
         self.size = size
         self.dataset = dataset
         self.serie_len = 0
-        self.n_subjects = len(self.dataset.subjects); 
+        self.n_subjects = len(self.dataset.subjects) if n_subjects is None else n_subjects; 
         self.weights = torch.DoubleTensor(weights)
         self.f = self.dataset.f # fin de la serie temporelle
         self.d = self.dataset.d
         self.tr = self.dataset.tr_
-        
+        self.subjects = self.__subjects__()
     def __iter__(self):
         num_batches = self.size// self.batch_size
         n_subject_samples = self.batch_size //self.n_subjects
@@ -47,19 +47,24 @@ class RPSampler(torch.utils.data.sampler.Sampler):
             if num_batches % 100 == 0 :
                 print("batches restants :",num_batches)
             #iterate on each subject in the dataset
-            for subject in self.dataset.subjects:
-                sampled = 0
+            n_samples = 0
+            while n_samples<self.n_subjects:
+                n_stims = 0
+                subject = self.subjects.__next__()
                 #sample `n_subject_samples` per subject
-                while sampled < n_subject_samples:
+                while n_stims < n_subject_samples:
                     # each sample is a target and an anchor window. Positive or/and negative windows are sampled in the Dataset class. 
                     target  = 2*torch.multinomial(
                 self.weights, 1, replacement=True) -1
                     t = np.random.rand() if not isinstance(self.dataset, RP_Dataset) else choice(arange(self.d, self.f-int(self.dataset.w/self.tr), 1))
-                    sampled += 1
+                    n_stims += 1
                     yield (t,target,subject)
-            
+                n_samples +=1
             num_batches -=1
-
+    def __subjects__(self, n = 0):
+        while True:
+            yield self.dataset.subjects[n]
+            n = n+ 1 if n<self.n_subjects-1 else 0
     def __len__(self):
         return self.size 
 
@@ -218,9 +223,9 @@ class RP_Dataset_Multi(Abstract_Dataset):
         audio = self.load_audio( subject, stim)
         self.d_audio , self.f_audio = 0, audio.shape[1]
         #define tr and audio intervals 
-        self.f = int(self.f_audio/(self.tr*self.sr))+fmri_onset
+        self.f = int(self.f_audio/(self.tr*self.sr))
         #load fmri data
-        fmri = self.load_fmri(subject, stim)[fmri_onset:self.f]
+        fmri = self.load_fmri(subject, stim)[fmri_onset:self.f+fmri_onset]
         #define tr and audio intervals 
         #rescale t`
         #fmri_index*TR -->seconds
@@ -230,7 +235,7 @@ class RP_Dataset_Multi(Abstract_Dataset):
         # slice fmri window 
         # use self.tr_ to have a fixed window length(instead of using pad_sequence in collate_fn)
         fmri_w = fmri[t:t+w_tr]
-        assert  fmri_w.shape[0]== 10 , f'{subject}, {stim},{ fmri_w.shape[0]}, {w_tr}, {end} , {fmri.shape}'
+        assert  fmri_w.shape[0]== 10 , f'{subject}, {stim},{ fmri_w.shape[0]}, {w_tr},{self.f},  {end}, {t} , {fmri.shape}'
         # sample a positive or negative audio index
         try : 
             t_ = self.get_pos(t) if target>0 else self.get_neg(t)
