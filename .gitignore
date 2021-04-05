@@ -5,3 +5,5 @@ __pycache__/
 *.pth
 data/
 STG_middle.nii.gz
+/parcellation/sub-*.npz
+/stimuli

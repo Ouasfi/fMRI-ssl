@@ -16,5 +16,19 @@ pip install -r requirements.txt
 ````
 python test.py
 ````
+# Data
+1. install datalad:
+````
+pip install datalad
+````
+2. Install the rep
+````
+datalad -r install ///labs/hasson/narratives/derivatives/fmriprep
+````
+2. load stimuli
+````
+datalad install -r -g ///labs/hasson/narratives/stimuli
+````
+3. load parcellations in the parcellatino dir
 # Usage
 -  The training process is described in 'Fmri-audio.ipynb`
