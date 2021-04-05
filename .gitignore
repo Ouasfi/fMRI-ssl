@@ -4,5 +4,6 @@ __pycache__/
 .vscode/
 *.pth
 data/
+STG_middle.nii.gz
 /parcellation/sub-*.npz
 /stimuli
