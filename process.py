@@ -1,3 +1,4 @@
+#%%
 import numpy as np
 import pandas  as pd 
 import argparse
@@ -12,17 +13,24 @@ import torchaudio.functional as F
 import torchaudio.transforms as T
 import json
 import glob
+
+        
+
+#%%
 def subjects2stmulis(DIR: str):
     subjects_stims = {}
     stimulis = []
     parcellations = glob.glob(DIR + r'/sub-*_task-*_space-MNI152NLin2009cAsymres-native.npz')
     regex = r'sub-(.*)_task-(.*)_space-MNI152NLin2009cAsymres-native.npz'
+    excludes = json.load(open("data/exclude_scans.json", 'r'))
     for  fmri in parcellations:
         subject, stim = re.findall(regex, fmri)[0]
         stimulis.append(stim)
-        subjects_stims[subject].append(stim) if len(subjects_stims.get(subject, []))>0  else subjects_stims.update({subject: [stim]}) 
+        if f'sub-{subject}' not in excludes.get(stim.split('_')[0], []):
+            subjects_stims[subject].append(stim) if len(subjects_stims.get(subject, []))>0  else subjects_stims.update({subject: [stim]}) 
     return subjects_stims, stimulis
-
+#json.dump(subjects2stmulis('data/parcellated' )[0], open('metadata/mapping.json', 'w'))
+#%%
 def process_audio(path):
         if os.path.exists(AUDIODIR+ path.split('/')[-1].split('.')[0]+'.npy'): 
             print(f'File {path} Already saved')
