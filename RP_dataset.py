@@ -196,7 +196,8 @@ class RP_Dataset_Multi(Abstract_Dataset):
         debut(int): Starting indice of the considered time series.
     """
     def __init__(self, subjects, sampling_params, wind_len , debut = 0,\
-                 fin = None, dry_run = False,sr = 22050, tr=1.5, mode = 'train' ):
+                 fin = None, dry_run = False,sr = 22050, tr=1.5, 
+                 mode = 'train', scenario = 'stims' ):
         
         super().__init__(subjects, wind_len = wind_len, n_features = 3)
         self.tr, self.sr = tr , sr
@@ -210,6 +211,7 @@ class RP_Dataset_Multi(Abstract_Dataset):
         self.d, self.f = debut, fin #in tr
         self.dry_run = dry_run
         self.mode = mode
+        self.scenario = scenario
     def get_windows(self,index):
         '''
         a method to get sampled windows
@@ -218,33 +220,24 @@ class RP_Dataset_Multi(Abstract_Dataset):
         (t, target,subject) = index
         # select a stim
         stim = self.select_stimuli(subject)
-        fmri_onset = self.events[stim.split('_')[0]].get(stim.split('_')[0], {'onset': 3})['onset'] 
+        fmri_onset = self.get_onset(stim)
         # load audio
         audio = self.load_audio( subject, stim)
         self.d_audio , self.f_audio = 0, audio.shape[1]
-        #define tr and audio intervals 
-        self.f = int(self.f_audio/(self.tr*self.sr))
-        #load fmri data
+        self.f = self.frames2tr(self.f_audio)
+        # load fmri data
         fmri = self.load_fmri(subject, stim)[fmri_onset:self.f+fmri_onset]
-        #define tr and audio intervals 
-        #rescale t`
-        #fmri_index*TR -->seconds
-        w_tr = int(np.floor(self.w/self.tr))
-        end, start =  self.f-2*w_tr, self.d
-        t = int(t*(end-start+1) + start)
+        #rescale t using  self.f_audio and w_tr
+        w_tr = self.sec2tr(self.w)
+        t = self.rescale(t, w_tr)
         # slice fmri window 
-        # use self.tr_ to have a fixed window length(instead of using pad_sequence in collate_fn)
         fmri_w = fmri[t:t+w_tr]
         assert  fmri_w.shape[0]== 10 , f'{subject}, {stim},{ fmri_w.shape[0]}, {w_tr},{self.f},  {end}, {t} , {fmri.shape}'
         # sample a positive or negative audio index
-        try : 
-            t_ = self.get_pos(t) if target>0 else self.get_neg(t)
-        except:
-            print(stim, subject, t, self.f_audio, self.f, fmri_onset)
-            sys.exit()
+        t_ = self.get_pos(t) if target>0 else self.get_neg(t)
         if self.dry_run:
             return (t, t_)
-        # sample a positive or negative audio window
+        # slice audio window
         audio_w = audio[0,t_:t_+self.w*self.sr]
         return (fmri_w, audio_w)
     def select_stimuli(self,subject):
@@ -252,7 +245,10 @@ class RP_Dataset_Multi(Abstract_Dataset):
         #print(subject)
         stims = [stim for stim in self.sub2stims[subject] if stim.split('_')[0] not in self.excluded]
         #print(stim.split('_')[0])
-        index = randint(low = 0, high = len(stims[:-1])) if self.mode == 'train' and len(stims)>1 else -1
+        if self.scenario == 'stims':
+            index = randint(low = 0, high = len(stims[:-1])) if self.mode == 'train' and len(stims)>1 else -1
+        if self.scenario == 'subjects':
+            index = randint(low = 0, high = len(stims))
         # select a stim randomly during training 
         return stims[index]
     def load_audio(self, subject, stim):
@@ -284,3 +280,15 @@ class RP_Dataset_Multi(Abstract_Dataset):
     def get_condition(self, subject, stim):
         metadata = self.meta.loc[f'sub-{subject}']
         return metadata.condition.split(',')[metadata.task.split(',').index(stim)]
+    def get_onset(self, stim):
+        return self.events[stim.split('_')[0]].get(stim.split('_')[0], {'onset': 3})['onset']
+    def rescale(self, t, w_tr):
+        end, start = self.frames2tr(self.f_audio)-2*w_tr, self.d
+        return int(t*(end-start+1) + start)
+    def sec2tr(self, n_sec):
+        return int(n_sec/self.tr)
+    def frames2sec(self,n_frames):
+        return int(n_frames/self.sr)
+    def frames2tr(self, n_frames):
+        s = n_frames/self.sr
+        return self.sec2tr(s)
