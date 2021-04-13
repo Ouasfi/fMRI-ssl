@@ -8,3 +8,10 @@ data/
 /stimuli
 audio.ipynb
 models/*ipynb
+
+*main.py*
+testing.py
+autodecoding.py
+R2.png
+scores.npy
+temp.py
