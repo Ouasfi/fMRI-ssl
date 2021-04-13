@@ -78,7 +78,7 @@ def parse_events(subject, stim_run):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser('Processing fmri data')
-    parser.add_argument('-d','--save_dir',help = "Dir ", type=str, default= 'data/stimuli/')
+    parser.add_argument('-d','--save_dir',help = "Directory where audio files are located ", type=str, default= 'data/stimuli/')
     AUDIODIR = parser.parse_args().save_dir
     FMRI_DIR = 'data/parcellated'
 

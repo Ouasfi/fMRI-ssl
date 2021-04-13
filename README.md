@@ -31,4 +31,17 @@ datalad install -r -g ///labs/hasson/narratives/stimuli
 ````
 3. load parcellations in the parcellatino dir
 # Usage
--  The training process is described in 'Fmri-audio.ipynb`
+1.  To Process data run:
+````
+python process.py
+````
+2. To train ssl model run: 
+````
+python training.py --mode ssl --m model_name
+````
+3. To train an encoding model on test_subjects:
+````
+python training.py --mode encoding --m model_name
+````
+where `model_name` specifies the path to a trained model.
+
