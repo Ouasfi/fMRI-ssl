@@ -151,7 +151,4 @@ if __name__ == "__main__":
     #assert soft_margin_loss(m((x_fmri.float(), x_audio)), y).requires_grad == True, 'Broken computational graph !'
     print('Keys sucessfully matched!')
     # %%
-    
-
-## SSl Training
-# %%
+    print(md.SiameseModel_corr(hidden_dim = 32*10, n_classes = 2,voxels = 556))
