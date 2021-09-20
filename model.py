@@ -50,11 +50,13 @@ class FMRIEmbed(nn.Module):
     """
     VGG 4 layers
     """
-    def __init__(self, voxels = 3):
+    def __init__(self, voxels = 3, temporal_filter = False):
         super(FMRIEmbed, self).__init__()
         power = 4
-
-        self.conv1 = nn.Conv1d(voxels, 2**(power+1), 1)
+        if temporal_filter:
+            self.conv1 = nn.Conv1d(voxels, 2**(power+1), 7, padding =3 )
+        else:
+            self.conv1 = nn.Conv1d(voxels, 2**(power+1), 1 )
         self.bn1 = nn.BatchNorm1d(2**(power+1))
         
     def forward(self, x):
@@ -67,10 +69,10 @@ class SiameseModel(nn.Module):
     """
     SiameseModel
     """
-    def __init__(self, hidden_dim, n_classes = 2, voxels = 3):
+    def __init__(self, hidden_dim, n_classes = 2, voxels = 3, temporal_filter = False):
         super(SiameseModel, self).__init__()
         self.audio = AudioEmbed().float()
-        self.fmri = FMRIEmbed(voxels).float()
+        self.fmri = FMRIEmbed(voxels, temporal_filter = temporal_filter).float()
         self.metric = nn.Linear(hidden_dim, out_features = n_classes)
         self.flatten= nn.Flatten()
     def forward(self, x_fmri, x_audio):
@@ -114,10 +116,10 @@ class SiameseModel_corr(nn.Module):
     SiameseModel
     """
 
-    def __init__(self, hidden_dim, n_classes = 2, voxels = 3):
+    def __init__(self, hidden_dim, n_classes = 2, voxels = 3, temporal_filter = False):
         super(SiameseModel_corr, self).__init__()
         self.audio = AudioEmbed().float()
-        self.fmri = FMRIEmbed(voxels).float()
+        self.fmri = FMRIEmbed(voxels, temporal_filter = temporal_filter).float()
         #self.metric = md.Cross_corr(hidden_dim = 32*10)
         self.flatten= nn.Flatten()
     def forward(self, x_fmri, x_audio):
@@ -146,3 +148,29 @@ class CrosscCorrLoss(nn.Module):
         on_diag = torch.diagonal(c).add_(-1).pow_(2).sum().mul(self.scale_loss)
         off_diag = off_diagonal(c).pow_(2).sum().mul(self.scale_loss)
         return on_diag + self.lambd * off_diag
+
+class CrossCorrLoss(nn.Module):
+    """
+    Cross_corr
+    """
+    def __init__(self, hidden_dim, scale = 1, lambd = 0.001):
+        super(CrossCorrLoss, self).__init__()
+        self.bn = nn.BatchNorm1d(hidden_dim, affine=False)
+        self.bn2 = nn.BatchNorm1d(hidden_dim, affine=False)
+        self.scale_loss = scale
+        self.lambd = lambd
+    def forward(self, out, y ):
+        y = (y>0).squeeze(1)
+        n_pos = y.sum()
+        x_fmri, x_audio = out[0], out[1]
+        z_fmri = self.bn(x_fmri)
+        z_audio = self.bn2(x_audio)
+        N, D = x_fmri.shape
+        c_pos = (z_fmri[y]).T@(z_audio[y])
+        c_neg = (z_fmri[~y]).T@(z_audio[~y])
+        c_pos.div_(n_pos.item())
+        c_neg.div_(N-n_pos.item())
+        on_diag_pos = torch.diagonal(c_pos).add_(-1).pow_(2).sum().mul(self.scale_loss)
+        on_diag_neg = torch.diagonal(c_neg).add_(1).pow_(2).sum().mul(self.scale_loss)
+        off_diag = (off_diagonal(c_pos).pow_(2).sum() + off_diagonal(c_neg).pow_(2).sum()).mul(self.scale_loss)
+        return on_diag_pos + on_diag_neg + self.lambd * off_diag

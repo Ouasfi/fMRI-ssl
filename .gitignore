@@ -16,3 +16,5 @@ R2.png
 scores.npy
 temp.py
 scores/*.csv
+scores/
+notebooks/*

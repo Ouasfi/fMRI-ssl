@@ -1,5 +1,5 @@
 from training import get_args, get_learner, ssl_loaders
-import encoding
+import encode as encoding
 import torch
 import json
 import numpy as np
